@@ -1,47 +1,56 @@
 const userModel = require("../models/user.model");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken")
-const redis = require("../db/redis")
-
+const jwt = require("jsonwebtoken");
+const redis = require("../db/redis");
 
 async function registerUser(req, res) {
   try {
-    const { username, email, password, fullName: { firstName, lastName } } = req.body;
-  
+    const {
+      username,
+      email,
+      password,
+      fullName: { firstName, lastName },
+      role
+    } = req.body;
+
     const isUserAlreadyExists = await userModel.findOne({
-      $or: [
-        { username: username },
-        { email: email }
-      ]
+      $or: [{ username: username }, { email: email }],
     });
 
     if (isUserAlreadyExists) {
-      return res.status(409).json({ message: "Username or Email Already Exists" })
+      return res
+        .status(409)
+        .json({ message: "Username or Email Already Exists" });
     }
 
     const hashPassword = await bcrypt.hash(password, 10);
-  
+
     const user = await userModel.create({
       username: username,
       email: email,
       password: hashPassword,
       fullName: {
         firstName: firstName,
-        lastName: lastName
-      }
+        lastName: lastName,
+      },
+      role: role || "user"
     });
 
-    const token = jwt.sign({
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role
-    }, process.env.JWT_SECRET, { expiresIn: "1d" });
-  
+    const token = jwt.sign(
+      {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
     res.cookie("token", token, {
       httpOnly: true,
       maxage: 24 * 60 * 60 * 1000,
-      secure: true
+      secure: true,
     });
 
     res.status(201).json({
@@ -52,22 +61,23 @@ async function registerUser(req, res) {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
-        addresses: user.addresses
-      }
-    })
+        addresses: user.addresses,
+      },
+    });
   } catch (error) {
     console.error("Error in registerUser:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-
 }
 
 async function loginUser(req, res) {
   try {
     const { username, email, password } = req.body;
 
-    const user = await userModel.findOne({ $or: [{ email: email }, { username: username }] }).select("+password");
-    
+    const user = await userModel
+      .findOne({ $or: [{ email: email }, { username: username }] })
+      .select("+password");
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -78,17 +88,21 @@ async function loginUser(req, res) {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    const token = jwt.sign({
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role
-    }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    const token = jwt.sign(
+      {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
     res.cookie("token", token, {
       httpOnly: true,
       maxage: 24 * 60 * 60 * 1000,
-      secure: true
+      secure: true,
     });
 
     res.status(200).json({
@@ -99,8 +113,8 @@ async function loginUser(req, res) {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
-        addresses: user.addresses
-      }
+        addresses: user.addresses,
+      },
     });
   } catch (error) {
     console.error("Error in loginUser:", error);
@@ -111,29 +125,107 @@ async function loginUser(req, res) {
 async function getCurrentUser(req, res) {
   return res.status(200).json({
     message: "Cureent user Fetched Successfully",
-    user:req.user
-  })
+    user: req.user,
+  });
+}
+
+async function getUserAddresses(req, res) {
+  try {
+    const id = req.user.id;
+    const user = await userModel.findById(id).select('addresses');
+    if (!user) {
+      return res.status(404).json({
+        message: "user not found"
+      })
+    }
+
+    return res.status(200).json({
+      message: "User address fetched",
+      addresses: user.addresses
+    })
+  } catch (error) {
+    console.log("get Address Error ", error)
+  }
+}
+
+async function addUserAddress(req, res) {
+  try {
+    const id = req.user.id;
+    const { street, city, state, pincode, country } = req.body
+    
+    const user =await userModel.findOneAndUpdate({ _id: id }, {
+      $push: {
+        addresses: {
+          street,
+          city,
+          state,
+          pincode,
+          country,
+        }
+      }
+    }, {
+      new:true
+    });
+
+    if (!user) {
+      return res.status(404).json({message: "User not Found"})
+    }
+
+    return res.status(201).json({
+      message: "Address added Successfully",
+      address: user.addresses[user.addresses.length-1]
+    })
+  } catch (error) {
+    console.error("Error in addAddress:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
 }
 
 async function logoutUser(req, res) {
-  const token = req.cookies.token
+  const token = req.cookies.token;
 
   if (token) {
-    await redis.set(`blacklist:${token}`, 'true', 'EX', 24 * 60 * 60)
+    await redis.set(`blacklist:${token}`, "true", "EX", 24 * 60 * 60);
   }
 
   res.clearCookie("token", {
     httpOnly: true,
-    secure:true
-  })
+    secure: true,
+  });
 
   return res.status(200).json({
-    message: "Logout successfully"
+    message: "Logout successfully",
+  });
+}
+
+async function deleteUserAddress(req, res) { 
+  const id = req.user.id;
+  const { addressId } = req.params;
+
+  const isAddressExists = await userModel.findOne({ _id: id, "addresses._id": addressId });
+  if (!isAddressExists) {
+    return res.status(404).json({ message: "Address not found" });
+  }
+
+  const user = await userModel.updateOne({ _id: id }, {
+    $pull: { addresses: { _id: addressId } }
+  }, { new: true }); 
+  
+  if (!user) {
+    return res.status(404).json({message: "User not Found"})
+  }
+
+  return res.status(200).json({
+    message: "Address removed successfully",
+    addresses: user.addresses
   })
 }
 module.exports = {
   registerUser,
   loginUser,
   getCurrentUser,
-  logoutUser
-}
+  logoutUser,
+  getUserAddresses,
+  addUserAddress,
+  deleteUserAddress
+};

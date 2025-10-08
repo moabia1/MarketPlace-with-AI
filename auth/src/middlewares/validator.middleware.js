@@ -30,6 +30,10 @@ const registerUserValidation = [
     .withMessage("Last Name must be a string")
     .notEmpty()
     .withMessage("Last Name is required"),
+  body("role")
+    .optional()
+    .isIn(["user", "seller"])
+    .withMessage("Role must be either 'user' or 'seller'"),
   respondWithValidationError
 ];
 
@@ -54,7 +58,38 @@ const loginUserValidation = [
   }
 ]
 
+
+const addUserAddressValidation = [
+  body("street")
+    .isString()
+    .withMessage("Street must be a string")
+    .notEmpty()
+    .withMessage("Street is required"),
+  body("city")
+    .isString()
+    .withMessage("City must be a string")
+    .notEmpty()
+    .withMessage("City is required"),
+  body("state")
+    .isString()
+    .withMessage("State must be a string")
+    .notEmpty()
+    .withMessage("State is required"),
+  body("pincode")
+    .isString()
+    .withMessage("Pincode must be a string")
+    .notEmpty()
+    .withMessage("Pincode is required"),
+  body("country")
+    .isString()
+    .withMessage("Country must be a string")
+    .notEmpty()
+    .withMessage("Country is required"),
+  respondWithValidationError
+]
+
 module.exports = {
   registerUserValidation,
-  loginUserValidation
+  loginUserValidation,
+  addUserAddressValidation
 }
