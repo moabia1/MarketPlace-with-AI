@@ -1,3 +1,8 @@
+// Mock redis to avoid real Redis connections during tests
+jest.mock("../src/db/redis", () => ({
+  set: jest.fn().mockResolvedValue("OK"),
+}));
+
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 

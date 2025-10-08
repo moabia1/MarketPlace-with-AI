@@ -3,7 +3,7 @@ const {
   registerUserValidation,
   loginUserValidation,
 } = require("../middlewares/validator.middleware");
-const { registerUser, loginUser, getCurrentUser } = require("../controllers/auth.controller");
+const { registerUser, loginUser, getCurrentUser, logoutUser } = require("../controllers/auth.controller");
 const { authMiddleware } = require("../middlewares/auth.middleware");
 
 const router = express.Router();
@@ -16,5 +16,8 @@ router.post("/login", loginUserValidation, loginUser);
 
 // GET /auth/me
 router.get("/me", authMiddleware, getCurrentUser)
+
+// GWT /auth/logout
+router.get("/logout", logoutUser)
 
 module.exports = router;
