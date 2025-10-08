@@ -107,6 +107,9 @@ async function loginUser(req, res) {
   }
 }
 
+async function getCurrentUser(req, res) {
+  
+}
 module.exports = {
   registerUser,
   loginUser
