@@ -1,5 +1,4 @@
 const productModel = require("../models/product.model");
-const {uploadImage} = require("../services/imagekit");
 
 async function productController(req, res) {
   // require the Product model lazily so importing this module doesn't force mongoose to be loaded
@@ -14,11 +13,11 @@ async function productController(req, res) {
     const price = {
       amount: Number(priceAmount),
       currency: priceCurrency,
-    }
+    };
+    // require image upload lazily so Jest doesn't attempt to parse ESM-only deps at import time
+    const { uploadImage } = require("../services/imagekit");
     const images = await Promise.all(
-      (req.files || []).map((file) =>
-        uploadImage({ buffer: file.buffer })
-      )
+      (req.files || []).map((file) => uploadImage({ buffer: file.buffer }))
     );
 
     const product = await productModel.create({
@@ -26,7 +25,7 @@ async function productController(req, res) {
       description,
       price,
       seller,
-      images
+      images,
     });
 
     return res.status(201).json(product);
@@ -37,8 +36,34 @@ async function productController(req, res) {
 }
 
 async function getProductsController(req, res) {
-  
+  const { q, minPrice, maxPrice, skip = 0, limit = 10 } = req.query;
+
+  const filter = {};
+
+  if (q) {
+    filter.$text = { $search: q };
+  }
+  if (minPrice) {
+    filter["price.amount"] = {
+      ...filter["price.amount"],
+      $gte: Number(minPrice),
+    };
+  }
+  if (maxPrice) {
+    filter["price.amount"] = {
+      ...filter["price.amount"],
+      $lte: Number(maxPrice),
+    };
+  }
+
+  const products = await productModel
+    .find(filter)
+    .skip(Number(skip))
+    .limit(Math.min(Number(limit), 20));
+
+  return res.status(200).json({ data: products });
 }
 module.exports = {
   productController,
+  getProductsController,
 };

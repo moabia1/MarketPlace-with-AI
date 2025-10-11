@@ -1,5 +1,8 @@
 // Mock dependencies
-jest.mock("../../src/models/product.model", () => jest.fn());
+jest.mock("../../src/models/product.model", () => ({
+  create: jest.fn(),
+  find: jest.fn(),
+}));
 jest.mock("../../src/services/imagekit", () => ({ uploadImage: jest.fn() }));
 
 // Mock auth middleware
@@ -22,17 +25,12 @@ describe("POST /api/products/", () => {
   });
 
   it("should create a product without images", async () => {
-    // Mock Product constructor + save() properly
-    Product.mockImplementation(function (data) {
-      return {
-        ...data,
-        _id: "abc123",
-        save: jest.fn().mockResolvedValue({
-          ...data,
-          _id: "abc123",
-        }),
-      };
-    });
+    const created = {
+      _id: "abc123",
+      title: "Test Product",
+      price: { amount: 100, currency: "USD" },
+    };
+    Product.create.mockResolvedValue(created);
 
     const res = await request(app)
       .post("/api/products/")
@@ -46,7 +44,7 @@ describe("POST /api/products/", () => {
       title: "Test Product",
       price: { amount: 100, currency: "USD" },
     });
-    expect(Product).toHaveBeenCalledTimes(1);
+    expect(Product.create).toHaveBeenCalledTimes(1);
   });
 
   it("should upload images and create a product", async () => {
@@ -55,16 +53,12 @@ describe("POST /api/products/", () => {
       fileId: "fake123",
     });
 
-    Product.mockImplementation(function (data) {
-      return {
-        ...data,
-        _id: "prod456",
-        save: jest.fn().mockResolvedValue({
-          ...data,
-          _id: "prod456",
-        }),
-      };
-    });
+    const created = {
+      _id: "prod456",
+      title: "Image Product",
+      price: { amount: 200, currency: "INR" },
+    };
+    Product.create.mockResolvedValue(created);
 
     const res = await request(app)
       .post("/api/products/")
@@ -80,6 +74,6 @@ describe("POST /api/products/", () => {
       currency: "INR",
     });
     expect(uploadImage).toHaveBeenCalledTimes(1);
-    expect(Product).toHaveBeenCalledTimes(1);
+    expect(Product.create).toHaveBeenCalledTimes(1);
   });
 });
