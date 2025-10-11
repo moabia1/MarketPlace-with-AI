@@ -15,22 +15,20 @@ async function productController(req, res) {
       amount: Number(priceAmount),
       currency: priceCurrency,
     }
-    const images = [];
-    const files = await Promise.all(
+    const images = await Promise.all(
       (req.files || []).map((file) =>
         uploadImage({ buffer: file.buffer })
       )
     );
-    images.push(...files);
 
-    const product = new productModel({
+    const product = await productModel.create({
       title,
       description,
       price,
       seller,
       images
     });
-    await product.save();
+
     return res.status(201).json(product);
   } catch (err) {
     console.error(err);
@@ -38,6 +36,9 @@ async function productController(req, res) {
   }
 }
 
+async function getProductsController(req, res) {
+  
+}
 module.exports = {
   productController,
 };

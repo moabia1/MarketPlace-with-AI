@@ -19,4 +19,8 @@ router.post("/",
   productController
 );
 
+// GET /api/products
+router.get("/", (req, res) => { 
+
+})
 module.exports = router;
