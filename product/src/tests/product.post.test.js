@@ -1,65 +1,85 @@
-// Provide manual mocks before importing app so the real modules that require mongoose or ImageKit never run
-jest.doMock("../../src/models/product.model", () => jest.fn());
-jest.doMock("../../src/services/imagekit", () => ({ uploadFile: jest.fn() }));
+// Mock dependencies
+jest.mock("../../src/models/product.model", () => jest.fn());
+jest.mock("../../src/services/imagekit", () => ({ uploadImage: jest.fn() }));
+
+// Mock auth middleware
+jest.mock(
+  "../../src/middlewares/auth.middleware",
+  () => () => (req, res, next) => {
+    req.user = { id: "seller123", role: "admin" };
+    next();
+  }
+);
 
 const request = require("supertest");
 const app = require("../../src/app");
-
 const Product = require("../../src/models/product.model");
-const imageKitService = require("../../src/services/imagekit");
+const { uploadImage } = require("../../src/services/imagekit");
 
-describe("POST /api/products", () => {
+describe("POST /api/products/", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it("should create a product without images", async () => {
-    const fakeSaved = {
-      _id: "abc123",
-      title: "Test",
-      price: { amount: 10, currency: "USD" },
-    };
-    // Make Product constructor return an object with save()
+    // Mock Product constructor + save() properly
     Product.mockImplementation(function (data) {
-      this.save = jest.fn().mockResolvedValue({ ...data, _id: "abc123" });
+      return {
+        ...data,
+        _id: "abc123",
+        save: jest.fn().mockResolvedValue({
+          ...data,
+          _id: "abc123",
+        }),
+      };
     });
 
     const res = await request(app)
-      .post("/api/products")
-      .send({
-        title: "Test",
-        price: JSON.stringify({ amount: 10, currency: "USD" }),
-        seller: "seller123",
-      })
+      .post("/api/products/")
+      .field("title", "Test Product")
+      .field("priceAmount", "100")
+      .field("priceCurrency", "USD")
       .set("Accept", "application/json");
 
     expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({ title: "Test" });
-    expect(Product).toHaveBeenCalled();
+    expect(res.body).toMatchObject({
+      title: "Test Product",
+      price: { amount: 100, currency: "USD" },
+    });
+    expect(Product).toHaveBeenCalledTimes(1);
   });
 
-  it("should upload images and create product", async () => {
-    // mock imageKitService.uploadFile
-    imageKitService.uploadFile.mockResolvedValue({
-      url: "https://ik.io/file.jpg",
-      thumbnail: "https://ik.io/thumb.jpg",
-      fileId: "file123",
+  it("should upload images and create a product", async () => {
+    uploadImage.mockResolvedValue({
+      url: "https://ik.imagekit.io/fake/file.jpg",
+      fileId: "fake123",
     });
 
     Product.mockImplementation(function (data) {
-      this.save = jest.fn().mockResolvedValue({ ...data, _id: "prod456" });
+      return {
+        ...data,
+        _id: "prod456",
+        save: jest.fn().mockResolvedValue({
+          ...data,
+          _id: "prod456",
+        }),
+      };
     });
 
     const res = await request(app)
-      .post("/api/products")
-      .field("title", "WithImage")
-      .field("price", JSON.stringify({ amount: 20, currency: "INR" }))
-      .field("seller", "seller456")
+      .post("/api/products/")
+      .field("title", "Image Product")
+      .field("priceAmount", "200")
+      .field("priceCurrency", "INR")
       .attach("images", Buffer.from("fake-image-content"), "photo.jpg");
 
     expect(res.status).toBe(201);
-    expect(imageKitService.uploadFile).toHaveBeenCalled();
-    expect(res.body).toMatchObject({ title: "WithImage" });
-    expect(res.body.images && res.body.images.length).toBeGreaterThan(0);
+    expect(res.body.title).toBe("Image Product");
+    expect(res.body.price).toMatchObject({
+      amount: 200,
+      currency: "INR",
+    });
+    expect(uploadImage).toHaveBeenCalledTimes(1);
+    expect(Product).toHaveBeenCalledTimes(1);
   });
 });

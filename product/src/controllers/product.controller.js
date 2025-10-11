@@ -6,7 +6,7 @@ async function productController(req, res) {
   try {
     const { title, description, priceAmount, priceCurrency } = req.body;
 
-    if (!title || !price) {
+    if (!title || !priceAmount || !priceCurrency) {
       return res.status(400).json({ message: "Title and price are required" });
     }
     const seller = req.user.id; // default seller for tests
@@ -21,6 +21,17 @@ async function productController(req, res) {
         uploadImage({ buffer: file.buffer })
       )
     );
+    images.push(...files);
+
+    const product = new productModel({
+      title,
+      description,
+      price,
+      seller,
+      images
+    });
+    await product.save();
+    return res.status(201).json(product);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server error" });
