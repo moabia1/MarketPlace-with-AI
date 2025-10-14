@@ -7,7 +7,7 @@ jest.mock("jsonwebtoken", () => ({
 // Mock the auth middleware to bypass actual JWT verification in tests
 jest.mock("../middlewares/auth.middleware", () => {
   return jest.fn(() => (req, res, next) => {
-    req.user = { _id: "userId123", role: "user" };
+    req.user = { id: "userId123", role: "user" };
     next();
   });
 });
@@ -86,6 +86,73 @@ describe("POST /api/cart/items", () => {
       .post("/api/cart/items")
       .set("Authorization", "Bearer faketoken")
       .send({ productId: "invalid-id", qty: 0 });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toHaveProperty("errors");
+  });
+});
+
+describe("PATCH /api/cart/items/:id", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  test("updates quantity of existing item and returns 200", async () => {
+    const existingCart = {
+      user: "userId123",
+      items: [
+        {
+          productId: { toString: () => "507f1f77bcf86cd799439011" },
+          quantity: 2,
+        },
+      ],
+      save: jest.fn().mockResolvedValue(true),
+    };
+
+    cartModel.findOne = jest.fn().mockResolvedValue(existingCart);
+
+    const res = await request(app)
+      .patch("/api/cart/items/507f1f77bcf86cd799439011")
+      .set("Authorization", "Bearer faketoken")
+      .set("Cookie", ["token=faketoken"])
+      .send({ qty: 5 });
+
+    expect(res.statusCode).toBe(200);
+    expect(existingCart.items[0].quantity).toBe(5);
+    expect(existingCart.save).toHaveBeenCalled();
+    expect(res.body).toHaveProperty("message", "Cart updated successfully");
+  });
+
+  test("removes item when qty is 0", async () => {
+    const existingCart = {
+      user: "userId123",
+      items: [
+        {
+          productId: { toString: () => "507f1f77bcf86cd799439011" },
+          quantity: 2,
+        },
+      ],
+      save: jest.fn().mockResolvedValue(true),
+    };
+
+    cartModel.findOne = jest.fn().mockResolvedValue(existingCart);
+
+    const res = await request(app)
+      .patch("/api/cart/items/507f1f77bcf86cd799439011")
+      .set("Authorization", "Bearer faketoken")
+      .set("Cookie", ["token=faketoken"])
+      .send({ qty: 0 });
+
+    expect(res.statusCode).toBe(200);
+    expect(existingCart.items.length).toBe(0);
+    expect(existingCart.save).toHaveBeenCalled();
+  });
+
+  test("returns 400 for invalid id or qty", async () => {
+    const res = await request(app)
+      .patch("/api/cart/items/invalid-id")
+      .set("Authorization", "Bearer faketoken")
+      .send({ qty: -1 });
 
     expect(res.statusCode).toBe(400);
     expect(res.body).toHaveProperty("errors");

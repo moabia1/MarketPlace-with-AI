@@ -1,7 +1,14 @@
 const express = require("express");
 const createAuthMiddleware = require("../middlewares/auth.middleware");
-const {addItemToCart} = require("../controllers/cart.controller")
-const {validateAddItemToCart} = require("../middlewares/validation.middleware")
+// Use the clean controller implementation for tests (file created by tests)
+const {
+  addItemToCart,
+  updateCartItem,
+} = require("../controllers/cart.controller");
+const {
+  validateAddItemToCart,
+  validateUpdateCartItem,
+} = require("../middlewares/validation.middleware");
 const router = express.Router();
 
 router.post(
@@ -10,5 +17,13 @@ router.post(
   createAuthMiddleware(["user"]),
   addItemToCart
 );
+
+router.patch(
+  "/items/:id",
+  validateUpdateCartItem,
+  createAuthMiddleware(["user"]),
+  updateCartItem
+);
+
 
 module.exports = router;
