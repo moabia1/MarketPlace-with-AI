@@ -158,3 +158,108 @@ describe("PATCH /api/cart/items/:id", () => {
     expect(res.body).toHaveProperty("errors");
   });
 });
+
+describe("GET /api/cart", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  test("returns current cart with items and totals", async () => {
+    // Sample cart with two items
+    const existingCart = {
+      user: "userId123",
+      items: [
+        {
+          productId: { toString: () => "507f1f77bcf86cd799439011" },
+          quantity: 2,
+          price: 10,
+        },
+        {
+          productId: { toString: () => "507f191e810c19729de860ea" },
+          quantity: 1,
+          price: 20,
+        },
+      ],
+    };
+
+    cartModel.findOne = jest.fn().mockResolvedValue(existingCart);
+
+    const res = await request(app)
+      .get("/api/cart")
+      .set("Authorization", "Bearer faketoken")
+      .set("Cookie", ["token=faketoken"]);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty("cart");
+    expect(res.body).toHaveProperty("totals");
+    expect(res.body.totals).toHaveProperty("totalQuantity");
+    expect(res.body.totals).toHaveProperty("itemCount");
+    // totalQuantity is number of distinct items
+    expect(res.body.totals.totalQuantity).toBe(2);
+    // itemCount = sum of quantities
+    expect(res.body.totals.itemCount).toBe(3);
+    expect(cartModel.findOne).toHaveBeenCalledWith({ user: "userId123" });
+  });
+
+  test("returns 404 when no cart exists", async () => {
+    // Simulate no cart existing: controller creates and saves an empty cart
+    cartModel.findOne = jest.fn().mockResolvedValue(null);
+    const savedCart = { user: "userId123", items: [] };
+    cartModel.mockImplementation(() => ({
+      items: [],
+      save: jest.fn().mockResolvedValue(savedCart),
+    }));
+
+    const res = await request(app)
+      .get("/api/cart")
+      .set("Authorization", "Bearer faketoken");
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty("cart");
+    expect(res.body.cart).toHaveProperty("items");
+    expect(res.body.cart.items.length).toBe(0);
+  });
+});
+
+describe("DELETE /api/cart", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  test("deletes the cart when it exists and returns 200", async () => {
+    const existingCart = {
+      user: "userId123",
+      items: [
+        {
+          productId: { toString: () => "507f1f77bcf86cd799439011" },
+          quantity: 1,
+        },
+      ],
+    };
+
+    cartModel.findOne = jest.fn().mockResolvedValue(existingCart);
+    cartModel.deleteOne = jest.fn().mockResolvedValue({ deletedCount: 1 });
+
+    const res = await request(app)
+      .delete("/api/cart")
+      .set("Authorization", "Bearer faketoken")
+      .set("Cookie", ["token=faketoken"]);
+
+    expect(res.statusCode).toBe(200);
+    expect(cartModel.findOne).toHaveBeenCalledWith({ user: "userId123" });
+    expect(cartModel.deleteOne).toHaveBeenCalledWith({ user: "userId123" });
+    expect(res.body).toHaveProperty("message");
+  });
+
+  test("returns 404 when no cart exists", async () => {
+    cartModel.findOne = jest.fn().mockResolvedValue(null);
+
+    const res = await request(app)
+      .delete("/api/cart")
+      .set("Authorization", "Bearer faketoken")
+      .set("Cookie", ["token=faketoken"]);
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toHaveProperty("message");
+  });
+});

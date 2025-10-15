@@ -53,7 +53,41 @@ async function updateCartItem(req, res) {
   res.status(200).json({ message: "Cart updated successfully", cart });
 }
 
+async function getCart(req, res) {
+  const user = req.user;
+
+  let cart = await cartModel.findOne({ user: user.id });
+
+  if (!cart) {
+    cart = new cartModel({ user: user.id, items: [] });
+    await cart.save();
+  }
+
+  res.status(200).json({
+    cart,
+    totals: {
+      totalQuantity: cart.items.length,
+      itemCount: cart.items.reduce((sum, item) => sum + item.quantity, 0),
+    },
+  });
+}
+
+async function deleteCart(req, res) {
+  const user = req.user;
+
+  const cart = await cartModel.findOne({ user: user.id });
+  if (!cart) {
+    return res.status(404).json({ message: "Cart not found" });
+  }
+
+  await cartModel.deleteOne({ user: user.id });
+
+  res.status(200).json({ message: "Cart deleted successfully" });
+}
+
 module.exports = {
   addItemToCart,
   updateCartItem,
+  getCart,
+  deleteCart,
 };

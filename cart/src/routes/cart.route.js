@@ -4,12 +4,17 @@ const createAuthMiddleware = require("../middlewares/auth.middleware");
 const {
   addItemToCart,
   updateCartItem,
+  getCart,
+  deleteCart
 } = require("../controllers/cart.controller");
 const {
   validateAddItemToCart,
   validateUpdateCartItem,
 } = require("../middlewares/validation.middleware");
 const router = express.Router();
+
+router.get("/", createAuthMiddleware(["user"]), getCart);
+router.delete("/", createAuthMiddleware(["user"]), deleteCart);
 
 router.post(
   "/items",
@@ -24,6 +29,5 @@ router.patch(
   createAuthMiddleware(["user"]),
   updateCartItem
 );
-
 
 module.exports = router;
