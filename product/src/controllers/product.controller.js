@@ -1,10 +1,10 @@
-const { default: mongoose } = require("mongoose");
+const mongoose = require("mongoose");
 const productModel = require("../models/product.model");
 
 async function productController(req, res) {
   // require the Product model lazily so importing this module doesn't force mongoose to be loaded
   try {
-    const { title, description, priceAmount, priceCurrency } = req.body;
+    const { title, description, priceAmount, priceCurrency, stock } = req.body;
 
     if (!title || !priceAmount || !priceCurrency) {
       return res.status(400).json({ message: "Title and price are required" });
@@ -28,6 +28,7 @@ async function productController(req, res) {
       price,
       seller,
       images,
+      stock: stock !== undefined ? Number(stock) : 0,
     });
 
     return res.status(201).json(product);
@@ -109,7 +110,7 @@ async function updateProductController(req, res) {
   try {
     const { id } = req.params;
 
-    const { title, description, priceAmount, priceCurrency } = req.body;
+    const { title, description, priceAmount, priceCurrency,stock } = req.body;
     // Use findById so tests that mock findById/findByIdAndUpdate work as expected.
     const product = await productModel.findById(id);
 
@@ -136,6 +137,7 @@ async function updateProductController(req, res) {
       };
       if (priceAmount !== undefined) update.price.amount = Number(priceAmount);
       if (priceCurrency !== undefined) update.price.currency = priceCurrency;
+      if (stock !== undefined) update.stock = Number(stock);
     }
 
     if (Object.keys(update).length === 0) {

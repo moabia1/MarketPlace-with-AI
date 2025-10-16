@@ -66,9 +66,9 @@ async function getCart(req, res) {
   res.status(200).json({
     cart,
     totals: {
-      totalQuantity: cart.items.length,
-      itemCount: cart.items.reduce((sum, item) => sum + item.quantity, 0),
-    },
+      itemCount: cart.items.length,
+      totalQuantity: cart.items.reduce((sum, item) => sum + item.quantity, 0),
+    }
   });
 }
 
