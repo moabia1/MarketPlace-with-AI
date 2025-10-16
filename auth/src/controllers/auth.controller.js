@@ -151,9 +151,9 @@ async function getUserAddresses(req, res) {
 async function addUserAddress(req, res) {
   try {
     const id = req.user.id;
-    const { street, city, state, pincode, country } = req.body
+    const { street, city, state, pincode, country } = req.body;
     
-    const user =await userModel.findOneAndUpdate({ _id: id }, {
+    const user = await userModel.findOneAndUpdate({ _id: id }, {
       $push: {
         addresses: {
           street,
