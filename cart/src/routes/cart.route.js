@@ -11,6 +11,7 @@ const {
   validateAddItemToCart,
   validateUpdateCartItem,
 } = require("../middlewares/validation.middleware");
+
 const router = express.Router();
 
 router.get("/", createAuthMiddleware(["user"]), getCart);

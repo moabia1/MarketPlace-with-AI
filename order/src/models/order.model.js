@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 
-
 const addressSchema = new mongoose.Schema({
   street: String,
   city: String,
@@ -9,56 +8,58 @@ const addressSchema = new mongoose.Schema({
   country: String,
 });
 
-
-const orderSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-  },
-  items: [
-    {
-      product: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-      },
-      quantity: {
-        type: Number,
-        default: 1,
-        min: 1,
-      },
-      price: {
-        amount: {
-          type: Number,
-          required: true,
-        },
-        currency: {
-          type: String,
-          required: true,
-          enum: ["USD", "INR"]
-        }
-      }
-    }
-  ],
-  status: {
-    type: String,
-    enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
-  },
-  totalAmount: {
-    amount: {
-      type: Number,
+const orderSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
-    currency: {
+    items: [
+      {
+        product: {
+          type: String,
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          default: 1,
+          min: 1,
+        },
+        price: {
+          amount: {
+            type: Number,
+            required: true,
+          },
+          currency: {
+            type: String,
+            required: true,
+            enum: ["USD", "INR"],
+          },
+        },
+      },
+    ],
+    status: {
       type: String,
+      enum: ["pending", "confirmed", "paid", "delivered", "shipped", "cancelled"],
+    },
+    totalAmount: {
+      amount: {
+        type: Number,
+        required: true,
+      },
+      currency: {
+        type: String,
+        required: true,
+        enum: ["USD", "INR"],
+      },
+    },
+    shippingAddress: {
+      type: addressSchema,
       required: true,
-      enum: ["USD", "INR"]
-    }
+    },
   },
-  shippingAddress: {
-    type: addressSchema,
-    required: true,
-  },
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 const orderModel = mongoose.model("order", orderSchema);
 
