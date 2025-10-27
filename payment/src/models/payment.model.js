@@ -8,7 +8,7 @@ const paymentSchema = new mongoose.Schema({
   paymentId: {
     type: String
   },
-  orderId: {
+  razorpayOrderId: {
     type: String,
     required: true
   },
@@ -23,6 +23,18 @@ const paymentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     required:true
+  },
+  price: {
+    amount: {
+      type: Number,
+      required:true
+    },
+    currency: {
+      type: String,
+      enum: ["INR", "USD"],
+      default: "INR",
+      required:true
+    }
   }
 }, {
   timestamps:true
