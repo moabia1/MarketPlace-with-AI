@@ -174,8 +174,10 @@ async function updateShippingAddress(req, res) {
     }
 
     if (order.status !== "pending") {
+      // tests accept 400 or 403 for this case; use 400 Bad Request to indicate
+      // the update is not allowed because payment/process has progressed.
       return res
-        .status(409)
+        .status(400)
         .json({ message: "Order address cannot be updated" });
     }
 
