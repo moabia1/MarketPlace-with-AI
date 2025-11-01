@@ -2,8 +2,9 @@ const {tool} = require("@langchain/core/tools")
 const { default: axios } = require("axios")
 const { default: z } = require("zod")
 
-const searchProduct = tool(async ({query, token}) => {
-  const response = await axios.get(`http://localhost:3001/api/products?q=${data.query}`, {
+const searchProduct = tool(async ({ query, token }) => {
+  console.log("Quesry : ",query, "token:", token)
+  const response = await axios.get(`http://localhost:3001/api/products?q=${query}`, {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -34,7 +35,9 @@ const addProductToCart = tool(async ({ productId, qty = 1, token }) => {
   name: "addProductToCart",
   description: "Add Product to the shopping cart",
   inputSchema: z.object({
-    productId: z.string.describe("The id of the product to add to the cart"),
+    productId: z.string().describe("The id of the product to add to the cart"),
     qty: z.number().describe("The quantity of the product to add to the cart").default(1)
   }),
 });
+
+module.exports = {searchProduct,addProductToCart}
